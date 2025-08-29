@@ -91,6 +91,7 @@ class _AppLinksNativeState extends State<AppLinksNative> {
   Future<void> initAppLinks() async {
     Uri? appLink = await _appLinks.getInitialLink();
     if (appLink != null) {
+      print("Initial app link received: $appLink");
       // This delay may or may not be needed...
       // we need to make sure Material navigator is accessible by the context though!
       Future.delayed(Duration(milliseconds: 0), () {
@@ -99,6 +100,7 @@ class _AppLinksNativeState extends State<AppLinksNative> {
     }
 
     _linkSubscription = _appLinks.uriLinkStream.listen((uri) {
+      print("Stream URI received: $uri");
       executeAppLink(navigatorKey.currentContext, uri);
     });
   }
@@ -134,6 +136,7 @@ Future<Transaction?> processAddTransactionFromParams(
   double amount = getAmountFromParams(params);
   String title = params["title"] ?? params["name"] ?? "";
   String note = params["note"] ?? params["notes"] ?? "";
+  print(params);
 
   if (mainAndSubCategory.main == null) {
     Future.delayed(Duration(milliseconds: 100), () {
@@ -278,13 +281,24 @@ Future executeAppLink(BuildContext? context, Uri uri,
     {Function(dynamic)? onDebug}) async {
   if (appStateSettings["hasOnboarded"] != true) return;
   if (!appLinksThrottler.canProceed()) return;
-
+  
+  print("executeAppLink called with URI: $uri");
+  print("URI scheme: ${uri.scheme}");
+  print("URI host: ${uri.host}");
+  print("URI path: ${uri.path}");
+  print("URI query: ${uri.query}");
+  print("URI pathSegments: ${uri.pathSegments}");
+  
   String endPoint = getApiEndpoint(uri);
   Map<String, String> params = parseAppLink(uri);
+
+  print("Parsed endpoint: $endPoint");
+  print("Parsed params: $params");
 
   // Note these URIs must be unique from the launch from widget URIs!
   switch (endPoint) {
     case "addTransaction":
+      print(uri);
       if (context != null) {
         if (params["messageToParse"] != null &&
             appStateSettings["notificationScanningDebug"] == true) {
@@ -543,9 +557,13 @@ String getApiEndpoint(Uri uri) {
 Map<String, String> parseAppLink(Uri uri) {
   Map<String, String> params = {};
 
-  uri.queryParameters.forEach((key, value) {
-    params[key] = Uri.decodeComponent(value);
-  });
+  try {
+    uri.queryParameters.forEach((key, value) {
+      params[key] = value;
+    });
+  } catch (e) {
+    print("Error parsing URI parameters: $e");
+  }
 
   return params;
 }
